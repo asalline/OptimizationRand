@@ -1,28 +1,20 @@
 function [pauli_new, measurements] = paulimatrices(original_rho, qubits)
 
-%Defining identity matrix "I" and Pauli matrices pauli_x, pauli_y, pauli_z.
-
 clear measurements
 
+% Defining identity matrix "I" and Pauli matrices pauli_x, pauli_y, pauli_z.
+% Also defining pauli_base, which contains the original Pauli matrices, and
+% pauli_new which will contain Pauli basis for wanted dimension.
 I = [1, 0; 0, 1];
-
 pauli_x = [0, 1; 1, 0];
-px = pauli_x;
-
 pauli_y = [0, -1i; 1i, 0];
-py = pauli_y;
-
 pauli_z = [1, 0; 0, -1];
-pz = pauli_z;
 
-pauli_base = {I, px, py, pz};
-
-finaloperator = 1;
-
+pauli_base = {I, pauli_x, pauli_y, pauli_z};
 pauli_new = cell(1, length(pauli_base)*length(pauli_base));
 
 n = 1;
-original_rho;
+% For-loop that forms the new Pauli basis.
 for kasvu = 1:qubits
     if kasvu == 1
         pauli_new = pauli_base;
@@ -39,11 +31,10 @@ for kasvu = 1:qubits
         n = 1;
     end
 end
+
+% Loop that calculates the expectation values for each Pauli basis -matrix.
+% These are named measurements because of other purposes.
 for n = 1:length(pauli_new)
     measurements(n) = trace(pauli_new{n}*original_rho);
 end
-
-% concatenate = cat(3, pauli_new{:});
-% sum_of_pauli = sum(concatenate, 3);
-
 end

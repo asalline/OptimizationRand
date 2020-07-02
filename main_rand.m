@@ -1,19 +1,21 @@
 % RANDOM MEASUREMENT DIRECTIONS TO OPTIMIZE RANDOM DENSITY MATRIX
 
 % Author: Antti Sällinen
-% Last update: 26.6.2020
+% Last update: 2.7.2020
 
 % This function triggers the solver and then calculates and plots the
 % fidelity (closeness of two quantum states) with every iteration step.
 % The solver itself optimizes the density matrix with restrictions that are
 % randomly obtained.
 
-% Needed scripts to operate: RDM_parempi.m & fmincon_rand.m & nlcon_rand.m &
-%                           paulimatrices.m
+% Needed scripts to operate: RDM_parempi.m, fmincon_rand.m, nlcon_rand.m,
+%                           paulimatrices.m, optimized_rho_rand.m &
+%                           to_optimize.m
+% Needed toolboxes to operate: Optimization Toolbox
 
 % There is six variables:
-%   wanted_meas: vector that contains the numbers of measurements that 
-%                one wants to use for measurement amounts.
+%   wanted_measurements: vector that contains the numbers of measurements 
+%                        thet one wants to use for measurement amounts.
 %   repeats: amount of the times this script generates new random density
 %            matrix and tries to optimize it (natural number, default: 1)
 %   qubits: amount of qubits to use (natural number, default: 1)
@@ -26,23 +28,29 @@
 clear all
 clc
 tic
-wanted_meas = [50];
-repeats = 2;
-qubits = 3;
+repeats = 1;
+qubits = 5;
 ranknum = 1;
 real = 0;
 final_means = zeros(1, 4^qubits - 1); final_vars = final_means;
+possible_measurements = [2:1:4^qubits-1];
 
-for choice = wanted_meas
+% wanted_measurements = [5:5:4^qubits-1];
+wanted_measurements = [400];
+
+measurement_ratio = wanted_measurements(end) / 4^qubits;
+
+for choice = wanted_measurements
     clearvars -except collection means_length best_fidelity final_means ...
-        final_vars choice repeats qubits ranknum real mean_infidelities
+        final_vars choice repeats qubits ranknum real mean_infidelities ...
+        possible_measurements
     amount_of_randoms = choice;
-    if amount_of_randoms == 63
+    if amount_of_randoms == possible_measurements(end)
         rounds = 1;
-    elseif amount_of_randoms == 2
-        rounds = 2;
+    elseif amount_of_randoms == possible_measurements(end-1)
+        rounds = 5;
     else
-        rounds = 10;
+        rounds = 1;
     end
     for times = 1:rounds
         clear measurement selection selection_txt
@@ -76,16 +84,16 @@ for choice = wanted_meas
             % values are not taken into data. If one wants to take those,
             % one can delete the next if-loop and only calculate the
 %             % fidelities with the for-loop.
-%             if length(history) <= 65
+            if length(history) <= 100
 
                 for k = 1:length(history)
                     fidelity(k) =...
                         (trace(sqrtm(sqrtm(history{k})*original_rho* ...
                         sqrtm(history{k}))))^2;
                 end
-%             else
-%                 fidelity = []
-%             end
+            else
+                fidelity = []
+            end
             fidelity;
             steps = [1:1:length(fidelity)];
             fidelities{jj} = fidelity;
@@ -170,8 +178,7 @@ for choice = wanted_meas
     amount_of_measurements = length(selection);
     formatSpec1 = "Iterated: %d times, Amount of qubits: %d, Rank of the density matrices: %d";
         str1 = sprintf(formatSpec1, repeats, qubits, rank);
-        title({['Data from density matrix optimization']; [str1]; ...
-            ['Measurements: ', selection_txt]})
+        title({['Data from density matrix optimization']; [str1]})
 
     % Forms the new scaled mean values the same way as in above, but this
     % time uses the values of collection -cell.
@@ -195,7 +202,7 @@ for choice = wanted_meas
     plot(steps2, scaled_means2, '.')
     hold off
 end
-
+%%
 % Plots the complete mean and variance of each iteration of the each set of
 % every amount of wanted measurements into nice graph.
 meases = (1:1: 4^qubits - 1);
@@ -209,10 +216,38 @@ for k = 1:length(meases)
     plot([meases(k), meases(k)], [pluserror(k), minuserror(k)], 'r');
 end
 plot(meases, final_means, 'k.', 'markersize', 5)
-ylim([0,0.8]);
+ylim([0, 0.8]);
 xlabel('Amount of random measurement directions');
 ylabel('Mean infidelity and variance');
 toc
-saveas(meansandvars, 'testi.png');
+% saveas(meansandvars, 'testi.png');
+
+% NEXT PART IS CURRENTLY WORKING ONLY WITH FINAL VALUES OF EVERYTHING!!!
+clear real
+measurement_matrix = 0;
+for k = selection
+    measurement_matrix = measurement_matrix + pauli_new{k};
+end
+real_measurements = real(measurement_matrix);
+imag_measurements = imag(measurement_matrix);
+figure('name', 'Real measurements')
+colormap gray
+image(real_measurements, 'CDataMapping', 'scaled')
+colorbar;
+figure('name', 'Imaginary measurements')
+colormap gray
+image(imag_measurements, 'CDataMapping', 'scaled')
+colorbar;
+figure('name', 'Real part closeness');
+% map = [0 0 0.3; 0 0 0.4; 0 0 0.5; 0 0 0.6; 0 0 0.7; 0 0 0.8; 0 0 0.9; 0 0 1.0];
+colormap gray
+Re_closeness = abs(real(original_rho) - real(history{end}));
+image(Re_closeness, 'CDataMapping', 'scaled')
+colorbar
+figure('name', 'Imaginary part closeness');
+colormap gray
+Im_closeness = abs(imag(original_rho) - imag(history{end}));
+image(Im_closeness, 'CDataMapping', 'scaled')
+colorbar;
 
 %That's all Folks!

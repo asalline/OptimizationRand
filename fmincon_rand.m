@@ -2,9 +2,9 @@
 %The optimization method that is used is "fmincon" which requires
 %Optimization Toolbox.
 
-function [x, fval, history] = fmincon_rand(pauli_new, measurements, selection, qubits)
+function [x, fval, history] = fmincon_rand(pauli_new, measurements, ...
+    selection, qubits)
 %Defining some used things.
-    
     history = {};
 %Below is the function with variables that are being optimized. In this
 %case the vector "x" contains the expectation values of Pauli
@@ -19,22 +19,25 @@ function [x, fval, history] = fmincon_rand(pauli_new, measurements, selection, q
     Aeq = [];
     beq = [];
     lb = [];
-    ub = ones(size(x0));
+%     ub = ones(size(x0));
+    ub = [];
 %"nonlincon" is the main constraint here. It allows multiple non linear
 %constraints to be used. "options" is used to obtain certain values
 %without need of any loops.
 %     nonlincon = @nlcon_rand;
-    options = optimset('OutputFcn', @myoutput, 'MaxFunEvals', 10000);
+    options = optimset('OutputFcn', @myoutput, 'MaxFunEvals', 100000, ...
+        'Display', 'off');
     
 %This "fmincon" returns the values of "x".
-    [x, fval, ~, output] = fmincon(@(x) testifunktio(x, pauli_new, qubits), x0, A, b, Aeq, beq, lb, ub,...
+    [x, fval, ~, ~] = fmincon(@(x) to_optimize(x, pauli_new, qubits), ...
+        x0, A, b, Aeq, beq, lb, ub, ...
         @(x) nlcon_rand(x, measurements, selection, qubits), options);
 %     disp(x);
 %     original_rho;
 %     disp(output)
 
 %This function controls and saves the values of each iteration step.
-    function stop = myoutput(x, optimvalues, state);
+    function stop = myoutput(x, optimvalues, state)
         stop = false;
         if isequal(state,'iter')
             history = [history, optimized_rho_rand(x, pauli_new, qubits)];
